@@ -197,13 +197,14 @@ Reorg Options
     with the ``--table`` or ``--parent-table`` options.
 
 ``-T SECS``, ``--wait-timeout=SECS``
-    pg_repack needs to take an exclusive lock at the end of the
-    reorganization.  This setting controls how many seconds pg_repack will
-    wait to acquire this lock. If the lock cannot be taken after this duration
-    and ``--no-kill-backend`` option is not specified, pg_repack will forcibly
-    cancel the conflicting queries. If you are using PostgreSQL version 8.4
-    or newer, pg_repack will fall back to using pg_terminate_backend() to
-    disconnect any remaining backends after twice this timeout has passed.
+    pg_repack needs to take one exclusive lock at the beginning and and one
+    exclusive lock at the end of the reorganization. This setting controls
+    how many seconds pg_repack will wait to acquire this lock. If the lock
+    cannot be taken after this duration and ``--no-kill-backend`` option is
+    not specified, pg_repack will forcibly cancel the conflicting queries.
+    If you are using PostgreSQL version 8.4 or newer, pg_repack will fall
+    back to using pg_terminate_backend() to disconnect any remaining
+    backends after twice this timeout has passed.
     The default is 60 seconds.
 
 ``-D``, ``--no-kill-backend``
@@ -469,6 +470,7 @@ Releases
 * pg_repack 1.4.9 (unreleased)
 
   * Fixed crash in ``get_order_by()`` using invalid relations (issue #321)
+  * Added support for tables that have been previously rewritten with `VACUUM FULL` and use storage=plain for all columns (issue #313)
 
 * pg_repack 1.4.8
 
