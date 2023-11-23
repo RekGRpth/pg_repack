@@ -40,7 +40,7 @@ Requirements
 ------------
 
 PostgreSQL versions
-    PostgreSQL 9.4, 9.5, 9.6, 10, 11, 12, 13, 14, 15
+    PostgreSQL 9.4, 9.5, 9.6, 10, 11, 12, 13, 14, 15, 16
 
 Disks
     Performing a full-table repack requires free disk space about twice as
@@ -473,10 +473,16 @@ Creating indexes concurrently comes with a few caveats, please see `the document
 Releases
 --------
 
-* pg_repack 1.4.9 (unreleased)
+* pg_repack 1.5.0
 
+  * Added support for PostgreSQL 16
+  * Fix possible SQL injection (issue #368)
+  * Support longer password length (issue #357)
+  * Fixed infinite loop on empty password (issue #354)
+  * Added ``--switch-threshold`` option (issue #347)
   * Fixed crash in ``get_order_by()`` using invalid relations (issue #321)
   * Added support for tables that have been previously rewritten with `VACUUM FULL` and use storage=plain for all columns (issue #313)
+  * More careful locks acquisition (issue #298)
 
 * pg_repack 1.4.8
 
