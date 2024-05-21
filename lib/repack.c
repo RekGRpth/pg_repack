@@ -901,6 +901,24 @@ repack_swap(PG_FUNCTION_ARGS)
 		CommandCounterIncrement();
 	}
 
+	/*
+	 * Sanity check if both relations are locked in access exclusive mode
+	 * before swapping these files.
+	 */
+#if PG_VERSION_NUM >= 120000
+	{
+		LOCKTAG	tag;
+
+		SET_LOCKTAG_RELATION(tag, MyDatabaseId, oid);
+		if (!LockHeldByMe(&tag, AccessExclusiveLock))
+			elog(ERROR, "must hold access exclusive lock on table \"%s\"", relname);
+
+		SET_LOCKTAG_RELATION(tag, MyDatabaseId, oid2);
+		if (!LockHeldByMe(&tag, AccessExclusiveLock))
+			elog(ERROR, "must hold access exclusive lock on table \"table_%u\"", oid);
+	}
+#endif
+
 	/* swap tables. */
 	swap_heap_or_index_files(oid, oid2);
 	CommandCounterIncrement();
@@ -1225,20 +1243,28 @@ swap_heap_or_index_files(Oid r1, Oid r2)
 	relform1->reltoastrelid = relform2->reltoastrelid;
 	relform2->reltoastrelid = swaptemp;
 
-	/* set rel1's frozen Xid to larger one */
-	if (TransactionIdIsNormal(relform1->relfrozenxid))
+	/*
+	 * Swap relfrozenxid and relminmxid, as they must be consistent with the data
+	 */
+	if (relform1->relkind != RELKIND_INDEX)
 	{
-		if (TransactionIdFollows(relform1->relfrozenxid,
-								 relform2->relfrozenxid))
-			relform1->relfrozenxid = relform2->relfrozenxid;
-		else
-			relform2->relfrozenxid = relform1->relfrozenxid;
+		TransactionId frozenxid;
+		MultiXactId	minmxid;
+	
+		frozenxid = relform1->relfrozenxid;
+		relform1->relfrozenxid = relform2->relfrozenxid;
+		relform2->relfrozenxid = frozenxid;
+
+		minmxid = relform1->relminmxid;
+		relform1->relminmxid = relform2->relminmxid;
+		relform2->relminmxid = minmxid;
 	}
 
 	/* swap size statistics too, since new rel has freshly-updated stats */
 	{
 		int32		swap_pages;
 		float4		swap_tuples;
+		int32		swap_allvisible;
 
 		swap_pages = relform1->relpages;
 		relform1->relpages = relform2->relpages;
@@ -1247,6 +1273,10 @@ swap_heap_or_index_files(Oid r1, Oid r2)
 		swap_tuples = relform1->reltuples;
 		relform1->reltuples = relform2->reltuples;
 		relform2->reltuples = swap_tuples;
+
+		swap_allvisible = relform1->relallvisible;
+		relform1->relallvisible = relform2->relallvisible;
+		relform2->relallvisible = swap_allvisible;
 	}
 
 	indstate = CatalogOpenIndexes(relRelation);
