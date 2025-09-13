@@ -35,7 +35,7 @@ jobs:
         run: apt-get install -y libcurl4-openssl-dev libnuma-dev
 
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Put pg_repack on PATH
         run: echo "$PWD/bin" >> $GITHUB_PATH
